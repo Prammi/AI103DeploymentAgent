@@ -21,7 +21,7 @@ agent = project.agents.create_version(
         model=MODEL_DEPLOYMENT_NAME,
         instructions=(
             "You are a simple helpful assistant. "
-            "Answer questions clearly and concisely."
+            "Answer questions clearly and concisely.."
         ),
     ),
 )
