@@ -1,4 +1,5 @@
-name: AI103 Foundry CI
+
+name: AI103 Foundry CI-CD
 
 on:
   push:
@@ -8,8 +9,12 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
-  validate:
+  test:
+    name: Test agent
     runs-on: ubuntu-latest
 
     steps:
@@ -28,5 +33,42 @@ jobs:
           pip install pytest
 
       - name: Run tests
+        run: pytest
+
+  deploy:
+    name: Deploy to Foundry
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: dev
+    
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
         run: |
-          pytest
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Authenticate to Azure using OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Create new Foundry agent version
+        env:
+          PROJECT_ENDPOINT: ${{ secrets.PROJECT_ENDPOINT }}
+          MODEL_DEPLOYMENT_NAME: ${{ secrets.MODEL_DEPLOYMENT_NAME }}
+        run: python agent/agent.py
